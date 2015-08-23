@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# kongo 140602
+# kongo		140602
+# hallberg 	141008
 
 import sys
 import socket
@@ -11,7 +12,7 @@ import threading
 import serial.serialposix
 import mpd
 
-HOST="efnet.portlane.se"
+HOST="efnet.port80.se"
 PORT=6667
 NICK="MrCoffee"
 IDENT="mrcoffee"
@@ -71,7 +72,8 @@ class CoffeeThread(threading.Thread):
         s.setRTS(False)
         time.sleep(30)
         last = s.getRI()
-        #self.sock.send("PRIVMSG %s :%s\r\n" % (CHANNEL, "herro everyone!"))
+        if self.sock:
+            self.sock.send("PRIVMSG %s :%s\r\n" % (CHANNEL, "herro everyone!"))
         while True:
             if last ^ s.getRI():
                 if s.getRI():
@@ -84,7 +86,7 @@ class CoffeeThread(threading.Thread):
                     if self.sock:
                         self.sock.send("PRIVMSG %s :%s\r\n" % (CHANNEL, msg))
                 except:
-                    pass
+                    self.sock = None
                 last = s.getRI()
             time.sleep(2)
 
@@ -92,11 +94,16 @@ if __name__ == '__main__':
     c = CoffeeThread()
     c.start()
 
+    l = file('/tmp/bot.log','w')
+
     while True:
         readbuffer=""
 
         try:
-            s=socket.socket( )
+            l.write('Connecting to %s %s\n'%(HOST,PORT))
+            l.flush()
+
+            s = socket.socket( )
             s.connect((HOST, PORT))
             s.send("NICK %s\r\n" % NICK)
             s.send("USER %s %s bla :%s\r\n" % (IDENT, HOST, REALNAME))
@@ -104,7 +111,7 @@ if __name__ == '__main__':
 
             c.sock = s
 
-            while 1:
+            while True:
                 readbuffer=readbuffer+s.recv(1024)
                 temp=string.split(readbuffer, "\n")
                 readbuffer=temp.pop( )
@@ -113,6 +120,8 @@ if __name__ == '__main__':
                     line=string.rstrip(line)
                     line=string.split(line)
                     #print line
+                    l.write('%s\n' % line)
+                    l.flush()
 
                     if line[0] == 'PING':
                         s.send("PONG %s\r\n" % line[1])
@@ -140,24 +149,26 @@ if __name__ == '__main__':
                                 reply(s, line, 'det gick fel.')
                                 file('/tmp/bot.last','w').write(str(e))
                         elif line[3] == ':!help':
-                            reply(s, line, '!kaffe, !play, !pause, !stop, !what, !sky <kanal>, !di <kanal>, !blipblop, !jul, !kohina, !slay')
+                            reply(s, line, '!kaffe, !play, !pause, !stop, !what, !rt <kanal>, !di <kanal>, !sr <kanal>, !blipblop, !jul, !awesome, !kohina, !slay')
                         elif line[3][2:] in ('stop','play','pause'):
                             try:
                                 mpd.MPDConn().cmd(line[3][2:])
                             except Exception as e:
                                 reply(s, line, 'aw.')
                                 file('/tmp/bot.last','w').write(str(e))
-                        elif line[3][2:] in ('sky','di','blipblop','kohina','slay'):
+                        elif line[3][2:] in ('rt','di','sr','blipblop','awesome','kohina','slay','jul'):
                             try:
-                                streambase = {'sky': 'pub2.sky.fm/sky_',
+                                streambase = {'rt': 'pub2.radiotunes.com/radiotunes_',
                                             'di': 'pub6.di.fm/di_',
+					    'sr': 'http-live.sr.se/',
                                             'blipblop': 'radio.mojt.net/blop.php?',
                                             'jul': 'radio.mojt.net/merjul.php?',
+                                            'awesome': 'radio.mojt.net/awesome.php?',
                                             'kohina': 'kohina.radio.ethz.ch:8000/kohina.ogg?',
                                             'slay': 'relay1.slayradio.org:8000/?'}
                                 m = mpd.MPDConn()
                                 m.cmd('clear')
-                                m.cmd('add http://%s%s' % (streambase[line[3][2:]], line[4] if len(line) >= 5 else ''))
+                                m.cmd('add http://%s%s%s' % (streambase[line[3][2:]], line[4] if len(line) >= 5 else '', '-mp3-192' if 'sr.se/' in streambase[line[3][2:]] else ''))
                                 m.cmd('play')
                                 time.sleep(2)
                                 cs = m.query('currentsong', True)
@@ -166,6 +177,10 @@ if __name__ == '__main__':
                             except Exception as e:
                                 reply(s, line, 'attans.')
                                 file('/tmp/bot.last','w').write(str(e))
-        except:
-            pass #yeah!
+        except Exception as e:
+            c.sock = None
+            print 'Exception in connection loop, restarting'
+            l.write('Exception in connection loop, restarting: %s\n'%e)
+            l.flush()
+            #pass #yeah!
         time.sleep(30)
