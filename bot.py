@@ -162,7 +162,7 @@ if __name__ == '__main__':
                                 reply(s, line, 'attans.')
                                 file('/tmp/bot.last','w').write(str(e))
                         elif line[3] == ':!help':
-                            reply(s, line, '!kaffe, !play, !pause, !stop, !what, !rt <kanal>, !di <kanal>, !sr <kanal>, !blipblop, !jul, !awesome, !kohina, !slay')
+                            reply(s, line, '!kaffe, !play, !pause, !stop, !what, !rt <kanal>, !di <kanal>, !sr <kanal>, !blipblop, !jul, !awesome, !kohina, !slay, !url <url>')
                         elif line[3][2:] in ('stop','play','pause'):
                             try:
                                 mpd.MPDConn().cmd(line[3][2:])
