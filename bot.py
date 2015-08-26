@@ -148,6 +148,19 @@ if __name__ == '__main__':
                             except Exception as e:
                                 reply(s, line, 'det gick fel.')
                                 file('/tmp/bot.last','w').write(str(e))
+                        elif line[3] == ':!url':
+                            try:
+                                m = mpd.MPDConn()
+                                m.cmd('clear')
+                                m.cmd('add ' + line[4])
+                                m.cmd('play')
+                                time.sleep(2)
+                                cs = m.query('currentsong', True)
+                                reply(s, line, 'spelas nu: ' + (cs['Name'] if 'Name' in cs else '<wtf>'))
+                                del m
+                            except Exception as e:
+                                reply(s, line, 'attans.')
+                                file('/tmp/bot.last','w').write(str(e))
                         elif line[3] == ':!help':
                             reply(s, line, '!kaffe, !play, !pause, !stop, !what, !rt <kanal>, !di <kanal>, !sr <kanal>, !blipblop, !jul, !awesome, !kohina, !slay')
                         elif line[3][2:] in ('stop','play','pause'):
